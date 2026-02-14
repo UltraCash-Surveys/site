@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | UltraCash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050505; color: white; }
+        .settings-card { background: #0a0a0a; border: 1px solid #1a1a1a; }
+    </style>
+</head>
+<body class="pb-20">
+
+    <nav class="p-6 flex justify-between items-center max-w-4xl mx-auto">
+        <a href="/dashboard" class="text-sm font-bold text-gray-500 hover:text-green-500 transition">← Dashboard</a>
+        <h1 class="text-xl font-black text-white">Account Settings</h1>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-6 pt-10">
+        
+        <section class="mb-10">
+            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Account Profile</h2>
+            <div class="settings-card p-6 rounded-3xl">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-green-500 text-2xl font-bold" id="pfp-initial">U</div>
+                    <div>
+                        <p class="text-sm text-gray-400">Logged in as</p>
+                        <p class="text-lg font-bold" id="display-email">user@example.com</p>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="text-red-500 text-sm font-bold hover:underline">Log Out of All Sessions</button>
+            </div>
+        </section>
+
+        <section class="mb-10">
+            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Referrals</h2>
+            <div class="settings-card p-6 rounded-3xl border-green-500/20 bg-green-500/[0.02]">
+                <h3 class="font-bold text-lg mb-2">Invite Friends, Earn 10%</h3>
+                <p class="text-sm text-gray-500 mb-4">Share your link and earn a permanent commission on all surveys they complete.</p>
+                <div class="flex gap-2">
+                    <input type="text" readonly id="ref-link" value="https://ultracash.vercel.app/signup?ref=loading" 
+                        class="flex-grow bg-black border border-white/10 p-3 rounded-xl text-sm text-gray-300 outline-none">
+                    <button onclick="copyRef()" class="bg-green-500 text-black px-4 rounded-xl font-bold text-sm hover:bg-green-400">Copy</button>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Security</h2>
+            <div class="settings-card p-6 rounded-3xl space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Change Password</label>
+                    <button onclick="sendResetEmail()" class="bg-white/5 border border-white/10 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-white/10 transition">
+                        Send Reset Email
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPh1FrUNe3W2XW7nFf3rLJVYiCk8Fb8eI",
+            authDomain: "ultracash-3616a.firebaseapp.com",
+            databaseURL: "https://ultracash-3616a-default-rtdb.firebaseio.com",
+            projectId: "ultracash-3616a",
+            storageBucket: "ultracash-3616a.firebasestorage.app",
+            messagingSenderId: "847670858799",
+            appId: "1:847670858799:web:2517b13afa5de2ad3262da"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('display-email').innerText = user.email;
+                document.getElementById('pfp-initial').innerText = user.email.charAt(0).toUpperCase();
+                document.getElementById('ref-link').value = `https://ultracash.vercel.app/signup?ref=${user.uid}`;
+            } else {
+                window.location.href = "/login";
+            }
+        });
+
+        window.sendResetEmail = () => {
+            const email = auth.currentUser.email;
+            sendPasswordResetEmail(auth, email).then(() => {
+                alert("Password reset email sent!");
+            }).catch(e => alert(e.message));
+        };
+
+        window.copyRef = () => {
+            const copyText = document.getElementById("ref-link");
+            copyText.select();
+            navigator.clipboard.writeText(copyText.value);
+            alert("Referral link copied!");
+        };
+
+        window.handleLogout = () => {
+            signOut(auth).then(() => window.location.href = "/");
+        };
+    </script>
+</body>
+</html>

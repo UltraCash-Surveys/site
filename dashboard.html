@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | UltraCash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050505; color: white; }
+        .glass-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
+    </style>
+</head>
+<body class="antialiased pb-20">
+
+    <nav class="flex justify-between items-center px-6 py-5 max-w-7xl mx-auto border-b border-white/5">
+        <div class="text-xl font-black italic text-green-500">ULTRACASH</div>
+        <div class="flex items-center gap-4">
+            <button onclick="handleLogout()" class="text-xs font-bold text-gray-500 hover:text-red-400 transition uppercase tracking-widest">Logout</button>
+            <div class="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center text-green-500 font-bold" id="user-initial">
+                ?
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 pt-10">
+        
+        <div class="grid md:grid-cols-3 gap-6 mb-12">
+            <div class="md:col-span-2 glass-card p-8 rounded-[2rem] flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10">
+                    <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.97 0-1.92 1.41-3.26 3.11-3.61V3.5h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.1.68-2.1 1.46 0 .81.48 1.44 2.76 2 2.59.63 4.12 1.71 4.12 4.05 0 2.16-1.55 3.32-3.46 3.66z"/></svg>
+                </div>
+                <div>
+                    <p class="text-gray-500 font-bold uppercase tracking-widest text-xs mb-1">Available Balance</p>
+                    <h2 class="text-6xl font-black text-white" id="balance-display">0.00</h2>
+                    <p class="text-green-500 text-sm font-bold mt-2">Points ready for withdrawal</p>
+                </div>
+                <div class="mt-8">
+                    <button onclick="window.location.href='/withdraw'" class="bg-green-500 text-black px-6 py-3 rounded-xl font-bold hover:bg-green-400 transition-all">Withdraw Funds</button>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 rounded-[2rem] border-green-500/20">
+                <h3 class="font-bold text-lg mb-4">Daily Progress</h3>
+                <div class="w-full bg-white/5 h-4 rounded-full mb-4 overflow-hidden">
+                    <div id="progress-bar" class="bg-green-500 h-full transition-all duration-1000" style="width: 0%"></div>
+                </div>
+                <p class="text-sm text-gray-400">Complete 3 more surveys to hit your daily bonus!</p>
+            </div>
+        </div>
+
+        <section>
+            <div class="flex items-center justify-between mb-6 px-2">
+                <h3 class="text-2xl font-extrabold tracking-tight">Available Tasks</h3>
+                <span class="flex items-center gap-2 text-xs font-bold text-green-500 bg-green-500/10 px-3 py-1 rounded-full uppercase">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Live Feed
+                </span>
+            </div>
+            
+            <div class="glass-card rounded-[2.5rem] p-4 min-h-[600px] flex items-center justify-center text-center">
+                <div id="cpx-container" class="w-full">
+                    <p class="text-gray-600 italic">Connecting to secure survey nodes...</p>
+                    <button onclick="alert('Please wait a while while we load the surveys...')" class="mt-4 text-green-500 border border-green-500/20 px-4 py-2 rounded-lg text-sm">Load Surveys Manually</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPh1FrUNe3W2XW7nFf3rLJVYiCk8Fb8eI",
+            authDomain: "ultracash-3616a.firebaseapp.com",
+            databaseURL: "https://ultracash-3616a-default-rtdb.firebaseio.com",
+            projectId: "ultracash-3616a",
+            storageBucket: "ultracash-3616a.firebasestorage.app",
+            messagingSenderId: "847670858799",
+            appId: "1:847670858799:web:2517b13afa5de2ad3262da"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // 1. Gated Access (Protect the Dashboard)
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in, pull their data
+                document.getElementById('user-initial').innerText = user.email.charAt(0).toUpperCase();
+                fetchUserPoints(user.uid);
+            } else {
+                // Not logged in? Kick them to login page
+                window.location.href = "/login";
+            }
+        });
+
+        // 2. Real-Time Points Listener
+        function fetchUserPoints(uid) {
+            const pointsRef = ref(db, 'users/' + uid + '/points');
+            onValue(pointsRef, (snapshot) => {
+                const data = snapshot.val();
+                const points = data || 0;
+                document.getElementById('balance-display').innerText = points.toLocaleString();
+                
+                // Update Progress Bar (Example: Goal of 1000 points)
+                const percent = Math.min((points / 1000) * 100, 100);
+                document.getElementById('progress-bar').style.width = percent + '%';
+            });
+        }
+
+        // 3. Logout
+        window.handleLogout = () => {
+            signOut(auth).then(() => {
+                window.location.href = "/";
+            });
+        };
+    </script>
+</body>
+</html>
