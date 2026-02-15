@@ -47,6 +47,45 @@
             </div>
         </section>
 
+        <button onclick="toggleSupport()" class="fixed bottom-6 right-6 w-14 h-14 bg-green-500 text-black rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </button>
+
+        <div id="support-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+            <div class="bg-gray-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 relative">
+                <button onclick="toggleSupport()" class="absolute top-6 right-6 text-gray-500 hover:text-white">✕</button>
+                
+                <h2 class="text-2xl font-black mb-2">Help & <span class="text-green-500">Support</span></h2>
+                <p class="text-gray-500 text-sm mb-6">Missing points? Payment issue? Let us know.</p>
+
+                <form action="https://formspree.io/f/xlgwbzoe" method="POST" class="space-y-4">
+                    <input type="hidden" name="user_email" id="hidden-user-email">
+                    <input type="hidden" name="user_id" id="hidden-user-uid">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Subject</label>
+                        <select name="subject" class="w-full p-4 rounded-2xl bg-black border border-white/10 outline-none focus:border-green-500 transition mt-1.5 text-sm">
+                            <option>Missing Points</option>
+                            <option>Withdrawal Issue</option>
+                            <option>Account Ban Appeal</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Message</label>
+                        <textarea name="message" rows="4" required class="w-full p-4 rounded-2xl bg-black border border-white/10 outline-none focus:border-green-500 transition mt-1.5 text-sm" placeholder="Describe your issue..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-green-500 text-black p-4 rounded-2xl font-black hover:bg-green-400 transition-all">SEND MESSAGE</button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            function toggleSupport() {
+                const modal = document.getElementById('support-modal');
+                modal.classList.toggle('hidden');
+            }
+        </script>
+
         <section>
             <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Security</h2>
             <div class="settings-card p-6 rounded-3xl space-y-6">
@@ -85,6 +124,15 @@
                 document.getElementById('ref-link').value = `https://ultracash.vercel.app/signup?ref=${user.uid}`;
             } else {
                 window.location.href = "/login";
+            }
+            
+            // Inject user info into the hidden support form fields
+            const emailField = document.getElementById('hidden-user-email');
+            const uidField = document.getElementById('hidden-user-uid');
+            
+            if(emailField && uidField) {
+                emailField.value = user.email;
+                uidField.value = user.uid;
             }
         });
 
