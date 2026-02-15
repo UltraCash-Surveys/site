@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const crypto = require('crypto'); // Built-in Node module
+const crypto = require('crypto');
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -15,18 +15,15 @@ if (!admin.apps.length) {
 const db = admin.database();
 
 export default async function handler(req, res) {
-    // TheoremReach uses these specific keys
     const { user_id, reward, tx_id, status, tx_signature, survey_id } = req.query;
 
-    // 1. SECURITY CHECK: Verify the Signature
+    // 1. SECURITY: Check the TheoremReach Signature
     const appSecret = process.env.TR_SECRET; 
-    
-    // TR Logic: MD5 of (tx_id + user_id + reward + secret)
     const checkString = `${tx_id}${user_id}${reward}${appSecret}`;
     const calculatedSignature = crypto.createHash('md5').update(checkString).digest('hex');
 
     if (calculatedSignature !== tx_signature) {
-        console.error("ALERT: Unauthorized Postback Attempt (Signature Mismatch)");
+        console.error("SECURITY BLOCK: Signature Mismatch. User tried to manual-reward.");
         return res.status(401).send("Invalid Signature");
     }
 
@@ -35,9 +32,8 @@ export default async function handler(req, res) {
         return res.status(400).send("Missing parameters.");
     }
 
-    const userShare = 0.70; 
-    const finalReward = Math.floor(Number(reward) * userShare); 
-    const adminProfit = Number(reward) - finalReward;
+    // USER GETS 100% - No more admin profit logic
+    const finalReward = Math.floor(Number(reward)); 
 
     try {
         const userRef = db.ref(`users/${user_id}/points`);
@@ -49,15 +45,15 @@ export default async function handler(req, res) {
             return (currentPoints || 0) + finalReward;
         });
 
-        // 4. Log the transaction
+        // 4. Log the transaction (Admin profit is now 0)
         await logRef.set({
             userId: user_id,
             txId: tx_id || "test",
             surveyId: survey_id || "unknown",
             status: status || "1",
-            grossAmount: Number(reward),
+            grossAmount: finalReward,
             userReceived: finalReward,
-            profitGenerated: adminProfit,
+            profitGenerated: 0, 
             timestamp: admin.database.ServerValue.TIMESTAMP
         });
 
@@ -65,7 +61,7 @@ export default async function handler(req, res) {
         await statsRef.transaction((current) => {
             const stats = current || { lifetime_profit: 0, total_surveys: 0, paid_out: 0 };
             return {
-                lifetime_profit: (stats.lifetime_profit || 0) + adminProfit,
+                lifetime_profit: (stats.lifetime_profit || 0), // No profit added
                 paid_out: (stats.paid_out || 0) + finalReward,
                 total_surveys: (stats.total_surveys || 0) + 1
             };
