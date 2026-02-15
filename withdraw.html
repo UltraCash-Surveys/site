@@ -36,7 +36,7 @@
                 </div>
                 <h3 class="text-xl font-bold mb-1">PayPal Cash</h3>
                 <p class="text-gray-500 text-sm mb-6">Minimum: 10,000 Points ($10)</p>
-                <button onclick="requestPayout('PayPal', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black" id="paypal-redeem">REDEEM</button>
+                <button onclick="handleRedemption('PayPal', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black" id="paypal-redeem">REDEEM</button>
             </div>
 
             <div class="reward-card p-8 rounded-[2.5rem] flex flex-col items-center text-center" id="card-amazon">
@@ -45,34 +45,34 @@
                 </div>
                 <h3 class="text-xl font-bold mb-1">Amazon Gift Card</h3>
                 <p class="text-gray-500 text-sm mb-6">Minimum: 10,000 Points ($10)</p>
-                <button onclick="requestPayout('Amazon', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
+                <button onclick="handleRedemption('Amazon', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
             </div>
 
             <div class="reward-card p-8 rounded-[2.5rem] flex flex-col items-center text-center" id="card-ltc">
                 <div class="w-20 h-20 bg-[#345d9d]/10 rounded-full flex items-center justify-center mb-6">
-                    <span class="text-3xl font-bold text-[#345d9d]">Ł</span>
+                    <span class="text-3xl font-bold text-[#345d9d]">W</span>
                 </div>
                 <h3 class="text-xl font-bold mb-1">Walmart Gift Card</h3>
                 <p class="text-gray-500 text-sm mb-6">Minimum: 10,000 Points ($10)</p>
-                <button onclick="requestPayout('Walmart', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
+                <button onclick="handleRedemption('Walmart', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
             </div>
 
             <div class="reward-card p-8 rounded-[2.5rem] flex flex-col items-center text-center" id="card-ltc">
-                <div class="w-20 h-20 bg-[#345d9d]/10 rounded-full flex items-center justify-center mb-6">
-                    <span class="text-3xl font-bold text-[#345d9d]">Ł</span>
+                <div class="w-20 h-20 bg-[#067538]/10 rounded-full flex items-center justify-center mb-6">
+                    <span class="text-3xl font-bold text-[#067538]">X</span>
                 </div>
                 <h3 class="text-xl font-bold mb-1">Xbox Gift Card</h3>
-                <p class="text-gray-500 text-sm mb-6">Minimum: 10,000 Points ($10)</p>
-                <button onclick="requestPayout('Xbox', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
+                <p class="text-gray-500 text-sm mb-6">Minimum: 15,000 Points ($15)</p>
+                <button onclick="handleRedemption('Xbox', 15000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
             </div>
 
             <div class="reward-card p-8 rounded-[2.5rem] flex flex-col items-center text-center" id="card-ltc">
-                <div class="w-20 h-20 bg-[#345d9d]/10 rounded-full flex items-center justify-center mb-6">
-                    <span class="text-3xl font-bold text-[#345d9d]">Ł</span>
+                <div class="w-20 h-20 bg-[#db1414]/10 rounded-full flex items-center justify-center mb-6">
+                    <span class="text-3xl font-bold text-[#db1414]">N</span>
                 </div>
                 <h3 class="text-xl font-bold mb-1">Nintendo eShop Gift Card</h3>
                 <p class="text-gray-500 text-sm mb-6">Minimum: 10,000 Points ($10)</p>
-                <button onclick="requestPayout('Nintendo', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
+                <button onclick="handleRedemption('Nintendo', 10000)" class="redeem-btn w-full bg-white text-black py-4 rounded-2xl font-black locked" disabled>REDEEM</button>
             </div>
 
         </div>
@@ -81,7 +81,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, push, set, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDPh1FrUNe3W2XW7nFf3rLJVYiCk8Fb8eI",
@@ -98,11 +98,9 @@
         const db = getDatabase(app);
 
         let userPoints = 0;
-        let currentUser = null;
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUser = user;
                 const pointsRef = ref(db, 'users/' + user.uid + '/points');
                 onValue(pointsRef, (snapshot) => {
                     userPoints = snapshot.val() || 0;
@@ -110,41 +108,67 @@
                     updateButtonStates();
                 });
             } else {
-                window.location.href = "/login";
+                window.location.href = "/login.html";
             }
         });
 
         function updateButtonStates() {
             const buttons = document.querySelectorAll('.redeem-btn');
             buttons.forEach(btn => {
-                const threshold = parseInt(btn.getAttribute('onclick').match(/\d+/)[0]);
-                if (userPoints >= threshold) {
-                    btn.classList.remove('locked', 'bg-white');
-                    btn.classList.add('bg-green-500', 'hover:bg-green-400');
+                // Extracts the amount from the onclick attribute
+                const amount = parseInt(btn.getAttribute('onclick').match(/\d+/)[0]);
+                if (userPoints >= amount) {
+                    btn.classList.remove('locked', 'bg-white', 'text-black');
+                    btn.classList.add('bg-green-500', 'text-black', 'hover:bg-green-400');
                     btn.disabled = false;
                 } else {
-                    btn.classList.add('locked', 'bg-white');
+                    btn.classList.remove('bg-green-500', 'hover:bg-green-400');
+                    btn.classList.add('locked', 'bg-white', 'text-black');
                     btn.disabled = true;
                 }
             });
         }
 
-        window.requestPayout = (method, amount) => {
-            if (confirm(`Redeem ${amount} points for ${method}?`)) {
-                // Log the request in a new 'payouts' node for you to review
-                const payoutRef = ref(db, 'payouts');
-                push(payoutRef, {
-                    uid: currentUser.uid,
-                    email: currentUser.email,
-                    method: method,
-                    points: amount,
-                    status: 'pending',
-                    timestamp: new Date().toISOString()
-                }).then(() => {
-                    alert("Payout Requested! We will process this shortly.");
-                });
+        window.handleRedemption = async (method, amount) => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        if (!confirm(`Confirm redemption of ${amount.toLocaleString()} points for ${method}?`)) return;
+
+        const userPointsRef = ref(db, `users/${user.uid}/points`);
+        const payoutRef = push(ref(db, 'payouts'));
+
+        try {
+            // 1. DEDUCT POINTS
+            const result = await runTransaction(userPointsRef, (current) => {
+                if (current === null) return 0;
+                if (current >= amount) return current - amount;
+                return; 
+            });
+
+            if (!result.committed) {
+                alert("Insufficient balance!");
+                return;
             }
-        };
+
+            // 2. CREATE PAYOUT REQUEST
+            // This is the only other write the frontend should do
+            await set(payoutRef, {
+                uid: user.uid,
+                email: user.email,
+                method: method,
+                points: amount,
+                status: 'pending',
+                timestamp: serverTimestamp()
+            });
+
+            alert("Success! Your payout request has been submitted.");
+
+        } catch (e) {
+            console.error("Error details:", e);
+            alert("Point deduction worked, but failed to save request. Contact Admin.");
+        }
+    };
     </script>
 </body>
 </html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>UltraCash | Admin Panel</title>
+</head>
+<body class="bg-black text-white font-sans">
+    <div id="admin-content" class="hidden p-8 max-w-6xl mx-auto">
+        <h1 class="text-4xl font-black mb-8 text-green-500 underline decoration-white/20">ULTRACASH ADMIN PANEL</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="bg-gray-900 border border-white/10 p-6 rounded-[2rem]">
+                <p class="text-gray-500 uppercase text-xs font-bold tracking-widest">Lifetime Profit</p>
+                <h2 id="stat-profit" class="text-3xl font-black text-green-400">$0.00</h2>
+            </div>
+            <div class="bg-gray-900 border border-white/10 p-6 rounded-[2rem]">
+                <p class="text-gray-500 uppercase text-xs font-bold tracking-widest">Surveys Completed</p>
+                <h2 id="stat-surveys" class="text-3xl font-black">0</h2>
+            </div>
+            <div class="bg-gray-900 border border-white/10 p-6 rounded-[2rem]">
+                <p class="text-gray-500 uppercase text-xs font-bold tracking-widest">Pending Payouts</p>
+                <h2 id="stat-pending" class="text-3xl font-black text-orange-400">0</h2>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 border border-white/10 rounded-[2.5rem] overflow-hidden">
+            <div class="p-6 border-b border-white/5">
+                <h3 class="text-xl font-bold">Action Required: Payouts</h3>
+            </div>
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-black/50 text-gray-500 text-xs uppercase font-bold">
+                    <tr>
+                        <th class="p-4">User Email</th>
+                        <th class="p-4">Amount</th>
+                        <th class="p-4">Method</th>
+                        <th class="p-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="payout-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+
+        // Firebase Config (Use yours)
+        const firebaseConfig = { 
+            apiKey: "AIzaSyDPh1FrUNe3W2XW7nFf3rLJVYiCk8Fb8eI",
+            authDomain: "ultracash-3616a.firebaseapp.com",
+            databaseURL: "https://ultracash-3616a-default-rtdb.firebaseio.com",
+            projectId: "ultracash-3616a",
+            storageBucket: "ultracash-3616a.firebasestorage.app",
+            messagingSenderId: "847670858799",
+            appId: "1:847670858799:web:2517b13afa5de2ad3262da" 
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // SECRECY: Replace this with YOUR actual Firebase UID
+        const MASTER_ADMIN_UID = "x5yAKDSPiIQsaSH11qwmr4L50GF3";
+
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.uid === MASTER_ADMIN_UID) {
+                document.getElementById('admin-content').classList.remove('hidden');
+                loadStats();
+                loadPayouts();
+            } else {
+                window.location.href = "index.html"; // Kick them out
+            }
+        });
+
+        function loadStats() {
+            onValue(ref(db, 'admin_logs/total_stats'), (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Assuming 1000 points = $1.00 for profit display
+                    document.getElementById('stat-profit').innerText = `$${(data.lifetime_profit / 1000).toFixed(2)}`;
+                    document.getElementById('stat-surveys').innerText = data.total_surveys;
+                }
+            });
+        }
+
+        function loadPayouts() {
+            onValue(ref(db, 'payouts'), (snapshot) => {
+                const payouts = snapshot.val();
+                const tbody = document.getElementById('payout-table-body');
+                tbody.innerHTML = "";
+                let pendingCount = 0;
+
+                for (let id in payouts) {
+                    const p = payouts[id];
+                    pendingCount++;
+                    tbody.innerHTML += `
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                            <td class="p-4 text-sm">${p.email}</td>
+                            <td class="p-4 font-bold text-green-500">${p.points} Pts</td>
+                            <td class="p-4 text-xs text-gray-400">${p.method}</td>
+                            <td class="p-4">
+                                <button onclick="markAsPaid('${id}')" class="bg-white text-black text-[10px] font-black px-3 py-1 rounded-full hover:bg-green-500 transition">MARK PAID</button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                document.getElementById('stat-pending').innerText = pendingCount;
+            });
+        }
+
+        window.markAsPaid = function(id) {
+            if(confirm("Have you actually sent the money? This will archive the request.")) {
+                remove(ref(db, `payouts/${id}`));
+            }
+        }
+    </script>
+</body>
+</html>
