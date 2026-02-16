@@ -22,6 +22,10 @@ export default async function handler(req, res) {
     const checkString = `${tr_tx_id}${tr_user_id}${tr_reward}${appSecret}`;
     const calculatedSignature = crypto.createHash('md5').update(checkString).digest('hex');
 
+    console.log("CheckString:", checkString);
+    console.log("Calculated:", calculatedSignature);
+    console.log("TheoremReach Hash:", hash);
+
     // 2. Security Check (The only one you need)
     if (calculatedSignature !== hash) {
         console.error("Signature Mismatch");
