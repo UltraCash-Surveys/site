@@ -20,40 +20,46 @@ export default async function handler(req, res) {
     const clean = (val) => {
         if (!val) return "";
         const value = Array.isArray(val) ? val[val.length - 1] : val;
-        return String(value).replace(/\[.*?\]/g, '').replace(/,/g, '').trim();
+        return String(value).trim();
     };
 
     const cUserID = clean(tr_user_id);
-    const cReward = clean(tr_reward);
+    const cReward = clean(tr_reward);   // IMPORTANT: use raw string for hashing
     const cTxID = clean(tr_tx_id);
     const cHash = clean(hash);
     const cStatus = clean(status) || "1";
     const secret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : "";
 
-    const md5Hex = (str) =>
-    crypto.createHash('md5').update(str).digest('hex');
-    
-    const attempts = [
-        md5Hex(`${cTxID}${cUserID}${cReward}${secret}`),         // Order 1
-        md5Hex(`${cTxID}${cUserID}${cReward}${cStatus}${secret}`), // Order 2
-        md5Hex(`${secret}${cTxID}${cUserID}${cReward}`)          // Order 3
-    ];
+    /* 
+    Correct hash format for TheoremReach:
+    MD5 -> Base64 -> URL safe -> remove =
+    */
+    const md5Base64Url = (str) =>
+        crypto
+            .createHash('md5')
+            .update(str)
+            .digest('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
 
-    const isAuthorized = attempts.includes(cHash);
+    // Most common correct order
+    const expected = md5Base64Url(`${cTxID}${cUserID}${cReward}${secret}`);
 
-    // DEBUG LOG
-    console.log("Expected:", cHash);
-    console.log("Calculated Attempts:", attempts);
+    console.log("Received:", cHash);
+    console.log("Calculated:", expected);
 
-    // --- SECURITY OVERRIDE ---
-    // If you are tired of 401s and want to just test the database, 
-    // you can change 'isAuthorized' to 'true' below temporarily.
+    const isAuthorized = expected === cHash;
+
     if (!isAuthorized) {
-        console.error("Signature Mismatch. Check TR_SECRET in Vercel.");
+        console.error("Signature mismatch.");
         return res.status(401).send("Invalid Signature");
     }
 
-    if (!cUserID || !cReward) return res.status(400).send("Missing Params");
+    if (!cUserID || !cReward) {
+        return res.status(400).send("Missing Params");
+    }
+
 
     const finalReward = Math.floor(Number(cReward)); 
 
