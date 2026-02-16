@@ -43,8 +43,11 @@ export default async function handler(req, res) {
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
-    // Most common correct order
-    const expected = md5Base64Url(`${cTxID}${cUserID}${cReward}${secret}`);
+    const stringToHash = `${cTxID}${cUserID}${cReward}${cStatus}${secret}`;
+
+    console.log("String used:", stringToHash);
+
+    const expected = md5Base64Url(stringToHash);
 
     console.log("Received:", cHash);
     console.log("Calculated:", expected);
@@ -52,7 +55,6 @@ export default async function handler(req, res) {
     const isAuthorized = expected === cHash;
 
     if (!isAuthorized) {
-        console.error("Signature mismatch.");
         return res.status(401).send("Invalid Signature");
     }
 
