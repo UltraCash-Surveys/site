@@ -23,10 +23,6 @@ export default async function handler(req, res) {
         return String(value).trim();
     };
 
-    const cUserID = clean(tr_user_id);
-    const cReward = clean(tr_reward);   // IMPORTANT: use raw string for hashing
-    const cTxID = clean(tr_tx_id);
-    const cHash = clean(hash);
     const cStatus = clean(status) || "1";
     const secret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : "";
 
@@ -36,25 +32,31 @@ export default async function handler(req, res) {
     */
 
     const md5Base64Url = (str) =>
-        crypto
-            .createHash('md5')
-            .update(str, 'utf8')
-            .digest('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
+  crypto
+    .createHash('md5')
+    .update(str, 'utf8')
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 
-    const stringToHash = `${cUserID}${cReward}${cTxID}${secret}`;
+    // Use exact query values, no cleaning except to pick last element if array
+    const cUserID = Array.isArray(tr_user_id) ? tr_user_id[tr_user_id.length - 1] : tr_user_id;
+    const cTxID = Array.isArray(tr_tx_id) ? tr_tx_id[tr_tx_id.length - 1] : tr_tx_id;
+    const cReward = Array.isArray(tr_reward) ? tr_reward[tr_reward.length - 1] : tr_reward;
+    const cHash = Array.isArray(hash) ? hash[hash.length - 1] : hash;
+
+    const stringToHash = `${cUserID}${cTxID}${cReward}${secret}`;
 
     console.log("String used:", stringToHash);
-    console.log("Received:", cHash);
+    console.log("Received hash:", cHash);
 
     const expected = md5Base64Url(stringToHash);
 
-    console.log("Calculated:", expected);
+    console.log("Calculated hash:", expected);
 
     if (expected !== cHash) {
-        return res.status(401).send("Invalid Signature");
+    return res.status(401).send("Invalid Signature");
     }
 
     const finalReward = Math.floor(Number(cReward)); 
