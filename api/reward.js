@@ -49,6 +49,25 @@ export default async function handler(req, res) {
     console.log("Calculated:", calculatedSignature);
     console.log("Received Hash:", cHash);
 
+    const secret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : "";
+
+    // Version A: Standard (What we are doing now)
+    const stringA = `${cTxID}${cUserID}${cReward}${secret}`;
+    // Version B: With Status (Very common)
+    const stringB = `${cTxID}${cUserID}${cReward}1${secret}`;
+    // Version C: Secret First (Alternative)
+    const stringC = `${secret}${cTxID}${cUserID}${cReward}`;
+
+    const hashA = crypto.createHash('md5').update(stringA).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const hashB = crypto.createHash('md5').update(stringB).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const hashC = crypto.createHash('md5').update(stringC).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+    console.log("--- TEST RESULTS ---");
+    console.log("Expected Hash:", cHash);
+    console.log("A Result:", hashA, " | String:", stringA);
+    console.log("B Result:", hashB, " | String:", stringB);
+    console.log("C Result:", hashC, " | String:", stringC);
+
     if (calculatedSignature !== cHash) {
         console.error("Signature Mismatch");
         return res.status(401).send("Invalid Signature");
