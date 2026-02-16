@@ -30,13 +30,13 @@ export default async function handler(req, res) {
     const cStatus = clean(status) || "1";
     const secret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : "";
 
-    // Generate the 3 most likely hash versions
-    const md5B64 = (str) => crypto.createHash('md5').update(str).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const md5Hex = (str) =>
+    crypto.createHash('md5').update(str).digest('hex');
     
     const attempts = [
-        md5B64(`${cTxID}${cUserID}${cReward}${secret}`),         // Order 1
-        md5B64(`${cTxID}${cUserID}${cReward}${cStatus}${secret}`), // Order 2
-        md5B64(`${secret}${cTxID}${cUserID}${cReward}`)          // Order 3
+        md5Hex(`${cTxID}${cUserID}${cReward}${secret}`),         // Order 1
+        md5Hex(`${cTxID}${cUserID}${cReward}${cStatus}${secret}`), // Order 2
+        md5Hex(`${secret}${cTxID}${cUserID}${cReward}`)          // Order 3
     ];
 
     const isAuthorized = attempts.includes(cHash);
