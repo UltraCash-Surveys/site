@@ -35,7 +35,14 @@ export default async function handler(req, res) {
     // 3. Security Check logic
     const appSecret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : ""; 
     const checkString = `${cTxID}${cUserID}${cReward}${appSecret}`;
-    const calculatedSignature = crypto.createHash('md5').update(checkString).digest('hex');
+    
+    // This creates the Base64 version with the specific URL-safe characters TheoremReach uses
+    const calculatedSignature = crypto.createHash('md5')
+        .update(checkString)
+        .digest('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
 
     // These logs will now show PURE data in Vercel
     console.log("CheckString:", checkString);
