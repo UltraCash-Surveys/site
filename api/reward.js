@@ -46,7 +46,7 @@ export default async function handler(req, res) {
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
-    const stringToHash = `${cTxID}${cUserID}${cReward}${secret}`;
+    const stringToHash = `${cTxID}${cUserID}${cReward}TESTSECRET`;
 
     console.log("String used:", stringToHash);
     console.log("Received:", rawHash);
