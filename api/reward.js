@@ -34,6 +34,7 @@ export default async function handler(req, res) {
     Correct hash format for TheoremReach:
     MD5 -> Base64 -> URL safe -> remove =
     */
+
     const md5Base64Url = (str) =>
         crypto
             .createHash('md5')
@@ -43,7 +44,7 @@ export default async function handler(req, res) {
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
-    const stringToHash = `${cTxID}${cUserID}${cReward}${cStatus}${secret}`;
+    const stringToHash = `${cTxID}${cUserID}${cReward}${secret}`;
 
     console.log("String used:", stringToHash);
 
@@ -58,9 +59,6 @@ export default async function handler(req, res) {
         return res.status(401).send("Invalid Signature");
     }
 
-    if (!cUserID || !cReward) {
-        return res.status(400).send("Missing Params");
-    }
 
 
     const finalReward = Math.floor(Number(cReward)); 
