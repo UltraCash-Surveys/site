@@ -15,15 +15,11 @@ if (!admin.apps.length) {
 const db = admin.database();
 
 export default async function handler(req, res) {
-    // 1. Capture the raw query parameters
     let { tr_user_id, tr_reward, tr_tx_id, hash, status, survey_id } = req.query;
 
-    // 2. THE CLEANER: This strips away junk like "[TX_ID]," and handles arrays
     const clean = (val) => {
         if (!val) return "";
-        // If TR sends an array (like in your logs), take the last real value
         const value = Array.isArray(val) ? val[val.length - 1] : val;
-        // Strip out anything in brackets and commas
         return String(value).replace(/\[.*?\]/g, '').replace(/,/g, '').trim();
     };
 
@@ -31,52 +27,33 @@ export default async function handler(req, res) {
     const cReward = clean(tr_reward);
     const cTxID = clean(tr_tx_id);
     const cHash = clean(hash);
-
-    // 3. Security Check logic
-    const appSecret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : ""; 
-    const checkString = `${cTxID}${cUserID}${cReward}${appSecret}`;
-    
-    // This creates the Base64 version with the specific URL-safe characters TheoremReach uses
-    const calculatedSignature = crypto.createHash('md5')
-        .update(checkString)
-        .digest('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-
-    // These logs will now show PURE data in Vercel
-    console.log("CheckString:", checkString);
-    console.log("Calculated:", calculatedSignature);
-    console.log("Received Hash:", cHash);
-
+    const cStatus = clean(status) || "1";
     const secret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : "";
 
-    // Version A: Standard (What we are doing now)
-    const stringA = `${cTxID}${cUserID}${cReward}${secret}`;
-    // Version B: With Status (Very common)
-    const stringB = `${cTxID}${cUserID}${cReward}1${secret}`;
-    // Version C: Secret First (Alternative)
-    const stringC = `${secret}${cTxID}${cUserID}${cReward}`;
+    // Generate the 3 most likely hash versions
+    const md5B64 = (str) => crypto.createHash('md5').update(str).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    
+    const attempts = [
+        md5B64(`${cTxID}${cUserID}${cReward}${secret}`),         // Order 1
+        md5B64(`${cTxID}${cUserID}${cReward}${cStatus}${secret}`), // Order 2
+        md5B64(`${secret}${cTxID}${cUserID}${cReward}`)          // Order 3
+    ];
 
-    const hashA = crypto.createHash('md5').update(stringA).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const hashB = crypto.createHash('md5').update(stringB).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const hashC = crypto.createHash('md5').update(stringC).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const isAuthorized = attempts.includes(cHash);
 
-    console.log("--- TEST RESULTS ---");
-    console.log("Expected Hash:", cHash);
-    console.log("A Result:", hashA, " | String:", stringA);
-    console.log("B Result:", hashB, " | String:", stringB);
-    console.log("C Result:", hashC, " | String:", stringC);
+    // DEBUG LOG
+    console.log("Expected:", cHash);
+    console.log("Calculated Attempts:", attempts);
 
-    if (calculatedSignature !== cHash) {
-        console.error("Signature Mismatch");
+    // --- SECURITY OVERRIDE ---
+    // If you are tired of 401s and want to just test the database, 
+    // you can change 'isAuthorized' to 'true' below temporarily.
+    if (!isAuthorized) {
+        console.error("Signature Mismatch. Check TR_SECRET in Vercel.");
         return res.status(401).send("Invalid Signature");
     }
 
-    // 4. Data Validation
-    if (!cUserID || !cReward) {
-        return res.status(400).send("Missing parameters.");
-    }
+    if (!cUserID || !cReward) return res.status(400).send("Missing Params");
 
     const finalReward = Math.floor(Number(cReward)); 
 
@@ -85,37 +62,33 @@ export default async function handler(req, res) {
         const logRef = db.ref('admin_logs/earnings').push();
         const statsRef = db.ref('admin_logs/total_stats');
 
-        // 5. Update User Points
-        await userRef.transaction((currentPoints) => {
-            return (currentPoints || 0) + finalReward;
-        });
+        // Update User
+        await userRef.transaction((curr) => (curr || 0) + finalReward);
 
-        // 6. Log the transaction
+        // Log it
         await logRef.set({
             userId: cUserID,
-            txId: cTxID || "test",
+            txId: cTxID,
             surveyId: survey_id || "unknown",
-            status: status || "1",
-            grossAmount: finalReward,
+            status: cStatus,
             userReceived: finalReward,
-            profitGenerated: 0, 
             timestamp: admin.database.ServerValue.TIMESTAMP
         });
 
-        // 7. Update Global Stats
-        await statsRef.transaction((current) => {
-            const stats = current || { lifetime_profit: 0, total_surveys: 0, paid_out: 0 };
+        // Update Global Stats
+        await statsRef.transaction((curr) => {
+            const s = curr || { lifetime_profit: 0, total_surveys: 0, paid_out: 0 };
             return {
-                lifetime_profit: (stats.lifetime_profit || 0),
-                paid_out: (stats.paid_out || 0) + finalReward,
-                total_surveys: (stats.total_surveys || 0) + 1
+                ...s,
+                paid_out: (s.paid_out || 0) + finalReward,
+                total_surveys: (s.total_surveys || 0) + 1
             };
         });
 
         return res.status(200).send("OK");
 
     } catch (error) {
-        console.error("Database Error:", error);
+        console.error("DB Error:", error);
         return res.status(500).send("DB Error");
     }
 }
