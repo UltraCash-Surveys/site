@@ -35,10 +35,12 @@ export default async function handler(req, res) {
     MD5 -> Base64 -> URL safe -> remove =
     */
 
+    const rawHash = Array.isArray(hash) ? hash[hash.length - 1] : hash;
+
     const md5Base64Url = (str) =>
         crypto
             .createHash('md5')
-            .update(str)
+            .update(str, 'utf8')
             .digest('base64')
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
@@ -47,17 +49,16 @@ export default async function handler(req, res) {
     const stringToHash = `${cTxID}${cUserID}${cReward}${secret}`;
 
     console.log("String used:", stringToHash);
+    console.log("Received:", rawHash);
 
     const expected = md5Base64Url(stringToHash);
 
-    console.log("Received:", cHash);
     console.log("Calculated:", expected);
 
-    const isAuthorized = expected === cHash;
-
-    if (!isAuthorized) {
+    if (expected !== rawHash) {
         return res.status(401).send("Invalid Signature");
     }
+
 
 
 
