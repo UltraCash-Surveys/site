@@ -15,45 +15,35 @@ if (!admin.apps.length) {
 const db = admin.database();
 
 export default async function handler(req, res) {
-    let { tr_user_id, tr_reward, tr_tx_id, hash, status, survey_id } = req.query;
+    
+    const data = req.method === "POST" ? req.body : req.query;
 
-    const clean = (val) => {
-        if (!val) return "";
-        const value = Array.isArray(val) ? val[val.length - 1] : val;
-        return String(value).trim();
-    };
+    let { tr_user_id, tr_reward, tr_tx_id, hash } = data;
 
-    const cStatus = clean(status) || "1";
-    const secret = process.env.TR_SECRET ? process.env.TR_SECRET.trim() : "";
+    const cUserID = Array.isArray(tr_user_id) ? tr_user_id.at(-1) : tr_user_id;
+    const cTxID   = Array.isArray(tr_tx_id)   ? tr_tx_id.at(-1)   : tr_tx_id;
+    const cReward = Array.isArray(tr_reward)  ? tr_reward.at(-1)  : tr_reward;
+    const cHash   = Array.isArray(hash)       ? hash.at(-1)       : hash;
 
-    /* 
-    Correct hash format for TheoremReach:
-    MD5 -> Base64 -> URL safe -> remove =
-    */
+    const secret = process.env.TR_SECRET;
 
     const md5Base64Url = (str) =>
-  crypto
-    .createHash('md5')
-    .update(str, 'utf8')
-    .digest('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-    // Use exact query values, no cleaning except to pick last element if array
-    const cUserID = Array.isArray(tr_user_id) ? tr_user_id[tr_user_id.length - 1] : tr_user_id;
-    const cTxID = Array.isArray(tr_tx_id) ? tr_tx_id[tr_tx_id.length - 1] : tr_tx_id;
-    const cReward = Array.isArray(tr_reward) ? tr_reward[tr_reward.length - 1] : tr_reward;
-    const cHash = Array.isArray(hash) ? hash[hash.length - 1] : hash;
+    crypto
+        .createHash('md5')
+        .update(str, 'utf8')
+        .digest('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
 
     const stringToHash = `${cUserID}${cTxID}${cReward}${secret}`;
 
-    console.log("String used:", stringToHash);
-    console.log("Received hash:", cHash);
-
     const expected = md5Base64Url(stringToHash);
 
-    console.log("Calculated hash:", expected);
+    console.log("Method:", req.method);
+    console.log("String used:", stringToHash);
+    console.log("Received:", cHash);
+    console.log("Calculated:", expected);
 
     if (expected !== cHash) {
     return res.status(401).send("Invalid Signature");
