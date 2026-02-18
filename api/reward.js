@@ -15,7 +15,7 @@ if (!admin.apps.length) {
 const db = admin.database();
 
 export default async function handler(req, res) {
-    
+
     const data = req.method === "POST" ? req.body : req.query;
 
     let { tr_user_id, tr_reward, tr_tx_id, hash } = data;
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 
-    const stringToHash = `${cUserID}${cTxID}${cReward}${secret}`;
+    const stringToHash = `${cUserID}${cReward}${cTxID}${secret}`;
 
     const expected = md5Base64Url(stringToHash);
 
