@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     // 1️⃣ Generate MD5 HEX first
     const md5Hex = crypto
     .createHash('md5')
-    .update(`${cUserID}${cReward}${cTxID}${secret}`, 'utf8')
+    .update(`${cUserID}${cTxID}${cReward}${secret}`, 'utf8')
     .digest('hex');
 
     // 2️⃣ Convert HEX to binary buffer
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 
-    console.log("String used:", `${cUserID}${cReward}${cTxID}${secret}`);
+    console.log("String used:", `${cUserID}${cTxID}${cReward}${secret}`);
     console.log("MD5 Hex:", md5Hex);
     console.log("Received:", cHash);
     console.log("Calculated:", expected);
