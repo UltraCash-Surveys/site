@@ -27,21 +27,24 @@ export default async function handler(req, res) {
 
     const secret = process.env.TR_SECRET;
 
-    const md5Base64Url = (str) =>
-    crypto
-        .createHash('md5')
-        .update(str, 'utf8')
-        .digest('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+    // 1️⃣ Generate MD5 HEX first
+    const md5Hex = crypto
+    .createHash('md5')
+    .update(`${cUserID}${cReward}${cTxID}${secret}`, 'utf8')
+    .digest('hex');
 
-    const stringToHash = `${cUserID}${cReward}${cTxID}${secret}`;
+    // 2️⃣ Convert HEX to binary buffer
+    const buffer = Buffer.from(md5Hex, 'hex');
 
-    const expected = md5Base64Url(stringToHash);
+    // 3️⃣ Convert to base64url
+    const expected = buffer
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 
-    console.log("Method:", req.method);
-    console.log("String used:", stringToHash);
+    console.log("String used:", `${cUserID}${cReward}${cTxID}${secret}`);
+    console.log("MD5 Hex:", md5Hex);
     console.log("Received:", cHash);
     console.log("Calculated:", expected);
 
